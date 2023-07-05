@@ -13,6 +13,7 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 from colour import Color
+import time
 
 
 parser = argparse.ArgumentParser()
@@ -90,7 +91,10 @@ def run(video_path, face_path, model_weight, jitter, vis, display_off, save_text
         exit()
 
     if facemode == 'DLIB':
-        cnn_face_detector = dlib.cnn_face_detection_model_v1(CNN_FACE_MODEL)
+        # cnn_face_detector = dlib.cnn_face_detection_model_v1(CNN_FACE_MODEL)
+        cv2_face_detector = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
     frame_cnt = 0
 
     # set up data transformation
@@ -114,20 +118,28 @@ def run(video_path, face_path, model_weight, jitter, vis, display_off, save_text
             height, width, channels = frame.shape
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+            print("::: Took Image.")
+            seconds = time.time()
+
             frame_cnt += 1
             bbox = []
             if facemode == 'DLIB':
-                dets = cnn_face_detector(frame, 1)
-                for d in dets:
-                    l = d.rect.left()
-                    r = d.rect.right()
-                    t = d.rect.top()
-                    b = d.rect.bottom()
+                # dets = cnn_face_detector(frame, 1)
+                dets = cv2_face_detector.detectMultiScale(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+                new_seconds = time.time()
+                print("::: Detected " + str(len(dets)) + " faces. Time Elapsed: " + str(new_seconds - seconds))
+                seconds = new_seconds
+
+                for (x, y, w, h) in dets:
+                    l = x # d.rect.left()
+                    r = x + w # d.rect.right()
+                    t = y # d.rect.top()
+                    b = y + w # d.rect.bottom()
                     # expand a bit
-                    l -= (r-l)*0.2
-                    r += (r-l)*0.2
-                    t -= (b-t)*0.2
-                    b += (b-t)*0.2
+                    # l -= (r-l)*0.2
+                    # r += (r-l)*0.2
+                    # t -= (b-t)*0.2
+                    # b += (b-t)*0.2
                     bbox.append([l,t,r,b])
             elif facemode == 'GIVEN':
                 if frame_cnt in df.index:
@@ -159,6 +171,10 @@ def run(video_path, face_path, model_weight, jitter, vis, display_off, save_text
                 draw.text((b[0],b[3]), str(round(score,2)), fill=(255,255,255,128), font=font)
                 if save_text:
                     f.write("%d,%f\n"%(frame_cnt,score))
+                
+                new_seconds = time.time()
+                print("::: Finished Inference. Frame Count: " + str(frame_cnt) + " Score: " + str(score) + " Elapsed Time: " + str(new_seconds - seconds))
+                seconds = new_seconds
 
             if not display_off:
                 frame = np.asarray(frame) # convert PIL image back to opencv format for faster display
@@ -177,7 +193,7 @@ def run(video_path, face_path, model_weight, jitter, vis, display_off, save_text
     if save_text:
         f.close()
     cap.release()
-    print 'DONE!'
+    print('DONE!')
 
 
 if __name__ == "__main__":

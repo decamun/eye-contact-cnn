@@ -136,10 +136,10 @@ def run(video_path, face_path, model_weight, jitter, vis, display_off, save_text
                     t = y # d.rect.top()
                     b = y + w # d.rect.bottom()
                     # expand a bit
-                    # l -= (r-l)*0.2
-                    # r += (r-l)*0.2
-                    # t -= (b-t)*0.2
-                    # b += (b-t)*0.2
+                    l -= (r-l)*0.2
+                    r += (r-l)*0.2
+                    t -= (b-t)*0.2
+                    b += (b-t)*0.2
                     bbox.append([l,t,r,b])
             elif facemode == 'GIVEN':
                 if frame_cnt in df.index:
